@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { generateRssFeed } = require('../modules/rss-generator');
+const { generateRssXml } = require('../modules/rss-generator');
 
 const baseDir = path.resolve(__dirname, '..');
 
@@ -46,7 +46,7 @@ try {
   const coreUrlsPath = path.join(baseDir, 'data', 'core-urls.json');
   if (fs.existsSync(coreUrlsPath)) {
     const coreUrls = JSON.parse(fs.readFileSync(coreUrlsPath, 'utf8'));
-    const rssXml = generateRssFeed(coreUrls, 'Kawaki Studios - Primary RSS Feed');
+    const rssXml = generateRssXml(coreUrls, 'Kawaki Studios - Primary RSS Feed');
     fs.writeFileSync(path.join(feedsDir, 'latest.xml'), rssXml, 'utf8');
     console.log('Regenerated data/feeds/latest.xml from core-urls.json');
   }
