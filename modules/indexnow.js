@@ -55,6 +55,10 @@ async function submitIndexNow(urls = [], onLog = console.log, customKey = null, 
       } else {
         const txt = await res.text();
         onLog(`   ⚠️ [${ep.name}] HTTP ${res.status}: ${txt || 'Non-200 response'}`);
+        if (txt && txt.includes('InvalidRequestParameters')) {
+          onLog(`      ↳ Notice: Search engines require ${keyLocation} to exist on '${host}'.`);
+          onLog(`      ↳ (Verified on kawaki.co.in. For other domains, create /${key}.txt returning '${key}').`);
+        }
         lastError = txt;
       }
     } catch (err) {

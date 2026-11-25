@@ -6,6 +6,11 @@ echo ======================================================
 echo    Starting Kawaki Rapid Indexer Dashboard...
 echo ======================================================
 
+if not exist "node_modules\" (
+  echo [Setup] Installing required dependencies...
+  call npm install
+)
+
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr :4040') do (
   taskkill /f /pid %%a >nul 2>&1
 )

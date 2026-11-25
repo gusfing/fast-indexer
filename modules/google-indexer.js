@@ -10,7 +10,8 @@ function getGoogleapis() {
   const candidates = [
     path.join(__dirname, '..'),
     path.join(__dirname, '..', 'node_modules'),
-    'c:/Users/ks209/Documents/kunal saas/kawaki website/files/node_modules/googleapis'
+    'c:/Users/ks209/Documents/kunal saas/kawaki website/files/node_modules/googleapis',
+    'c:/Users/ks209/Documents/kunal saas/kawaki website/files'
   ];
 
   for (const dir of candidates) {
@@ -21,18 +22,37 @@ function getGoogleapis() {
   return null;
 }
 
+function resolveKeyFile() {
+  const candidates = [
+    process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    path.join(__dirname, '..', 'service-account.json'),
+    'c:/Users/ks209/Documents/kunal saas/kawaki website/files/service-account.json'
+  ].filter(Boolean);
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
+}
+
 async function publishGoogleIndex(urls = [], onLog = console.log, concurrency = 5) {
   const gpkg = getGoogleapis();
   if (!gpkg) {
-    throw new Error('googleapis module not found. Please install dependencies or ensure project node_modules is present.');
+    throw new Error('googleapis module not found. Please install dependencies or ensure node_modules is present.');
   }
 
   const { google } = gpkg;
-  const keyFile = path.join(__dirname, '..', 'service-account.json');
+  const keyFile = resolveKeyFile();
 
-  if (!fs.existsSync(keyFile)) {
-    throw new Error('service-account.json not found in root directory.');
+  if (!keyFile) {
+    throw new Error('Google service-account.json credential file not found.');
   }
+
+  let clientEmail = 'Service Account';
+  try {
+    const rawKey = JSON.parse(fs.readFileSync(keyFile, 'utf8'));
+    if (rawKey.client_email) clientEmail = rawKey.client_email;
+  } catch (e) {}
 
   const auth = new google.auth.GoogleAuth({
     keyFile,
@@ -42,7 +62,8 @@ async function publishGoogleIndex(urls = [], onLog = console.log, concurrency = 
   const authClient = await auth.getClient();
   const indexing = google.indexing({ version: 'v3', auth: authClient });
 
-  onLog(`Authenticated with Google Cloud Service Account. Dispatching ${urls.length} URLs...`);
+  onLog(`Authenticated with Google Service Account: ${clientEmail}`);
+  onLog(`Dispatching ${urls.length} URLs across worker pool (concurrency: ${concurrency})...`);
 
   const results = [];
   const total = urls.length;
@@ -54,6 +75,8 @@ async function publishGoogleIndex(urls = [], onLog = console.log, concurrency = 
     while (index < total) {
       const currentIndex = index++;
       const url = urls[currentIndex].trim();
+      let hostname = '';
+      try { hostname = new URL(url).hostname; } catch (e) {}
 
       try {
         const res = await indexing.urlNotifications.publish({
@@ -74,10 +97,17 @@ async function publishGoogleIndex(urls = [], onLog = console.log, concurrency = 
           ? err.response.data.error.message 
           : err.message;
         results[currentIndex] = { url, status: err.code || 500, success: false, error: errorMsg };
-        onLog(`   ⚠️ [Google Limit/Error] ${url}: ${errorMsg}`);
+        
+        if (errorMsg.includes('Permission denied') || errorMsg.includes('403') || errorMsg.includes('ownership')) {
+          onLog(`   ⚠️ [Google 403 Forbidden] ${url}`);
+          onLog(`      ↳ Reason: ${errorMsg}`);
+          onLog(`      ↳ Action needed: In Google Search Console for '${hostname}', go to Settings > Users & Permissions and add '${clientEmail}' as an 'Owner'.`);
+        } else {
+          onLog(`   ⚠️ [Google API Error] ${url}: ${errorMsg}`);
+        }
       }
 
-      // Small pacing delay to avoid aggressive burst throttling
+      // Micro pacing delay
       if (concurrency > 1) {
         await new Promise(r => setTimeout(r, 40));
       }

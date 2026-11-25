@@ -37,14 +37,14 @@ function readJsonFile(filePath, fallback) {
     if (fs.existsSync(filePath)) {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
-  } catch (e) {}
+  } catch (e) { }
   return fallback;
 }
 
 function writeJsonFile(filePath, data) {
   try {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function sendJson(res, statusCode, payload) {
@@ -75,7 +75,7 @@ const server = http.createServer(async (req, res) => {
   // Real-time Search Engine Crawler / Googlebot Tracker
   try {
     recordBotVisit(req, { endpoint: pathname });
-  } catch (bErr) {}
+  } catch (bErr) { }
 
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -140,14 +140,14 @@ const server = http.createServer(async (req, res) => {
   // ========================================================
   // SYSTEM & CRAWLER TELEMETRY API
   // ========================================================
-  if ((pathname === '/api/status' || pathname === '/api/v1/status') && req.method === 'GET') {
+  if ((pathname === '/api/status' || pathname === '/api/v1/status' || pathname === '/api/health' || pathname === '/health') && req.method === 'GET') {
     const hasServiceAccount = fs.existsSync(path.join(__dirname, 'service-account.json'));
     const botStats = getBotStats();
     let hasGoogleapis = false;
     try {
       require('./modules/google-indexer');
       hasGoogleapis = true;
-    } catch (e) {}
+    } catch (e) { }
 
     return sendJson(res, 200, {
       ok: true,

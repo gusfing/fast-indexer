@@ -369,8 +369,8 @@
   <header>
     <div class="brand">
       <span class="brand-spark">⚡</span>
-      <span class="brand-title">Fast Indexer</span>
-      <span class="brand-tag">v2.1 High-Scale Edition</span>
+      <span class="brand-title">Kawaki Rapid Indexer</span>
+      <span class="brand-tag">Kawaki Studios Engine</span>
     </div>
     <div class="header-pills">
       <div class="status-pill">
@@ -389,12 +389,12 @@
     <section class="panel" style="gap: 0.75rem;">
       <div class="panel-title">
         <span>⚙️ Indexing & Protocol Configuration</span>
-        <span class="panel-subtitle">Configure API Key, IndexNow Key, and Target Host</span>
+        <span class="panel-subtitle">Authenticated Google Cloud Account & Search Protocols</span>
       </div>
       <div class="settings-row">
         <div class="setting-group">
-          <label class="setting-label">API Key (Optional / Auth)</label>
-          <input type="password" id="input-api-key" placeholder="Enter API Key if configured on VPS" />
+          <label class="setting-label">Google Service Account (Auto-Loaded)</label>
+          <input type="text" readonly style="opacity: 0.85; cursor: not-allowed;" value="gi-api-service-account@rm-instant-indexing-371507.iam.gserviceaccount.com" />
         </div>
         <div class="setting-group">
           <label class="setting-label">IndexNow Verification Key</label>
@@ -630,17 +630,17 @@
     let currentBotFilter = 'all';
 
     // Persist API settings in localStorage
-    if (localStorage.getItem('fast_api_key')) inputApiKey.value = localStorage.getItem('fast_api_key');
-    if (localStorage.getItem('fast_indexnow_key')) inputIndexNowKey.value = localStorage.getItem('fast_indexnow_key');
-    if (localStorage.getItem('fast_site_host')) inputSiteHost.value = localStorage.getItem('fast_site_host');
+    if (inputApiKey && localStorage.getItem('fast_api_key')) inputApiKey.value = localStorage.getItem('fast_api_key');
+    if (inputIndexNowKey && localStorage.getItem('fast_indexnow_key')) inputIndexNowKey.value = localStorage.getItem('fast_indexnow_key');
+    if (inputSiteHost && localStorage.getItem('fast_site_host')) inputSiteHost.value = localStorage.getItem('fast_site_host');
 
-    inputApiKey.addEventListener('change', () => localStorage.setItem('fast_api_key', inputApiKey.value));
-    inputIndexNowKey.addEventListener('change', () => localStorage.setItem('fast_indexnow_key', inputIndexNowKey.value));
-    inputSiteHost.addEventListener('change', () => localStorage.setItem('fast_site_host', inputSiteHost.value));
+    if (inputApiKey) inputApiKey.addEventListener('change', () => localStorage.setItem('fast_api_key', inputApiKey.value));
+    if (inputIndexNowKey) inputIndexNowKey.addEventListener('change', () => localStorage.setItem('fast_indexnow_key', inputIndexNowKey.value));
+    if (inputSiteHost) inputSiteHost.addEventListener('change', () => localStorage.setItem('fast_site_host', inputSiteHost.value));
 
     function getAuthHeaders() {
       const headers = { 'Content-Type': 'application/json' };
-      const key = inputApiKey.value.trim();
+      const key = inputApiKey ? inputApiKey.value.trim() : '';
       if (key) {
         headers['X-API-Key'] = key;
         headers['Authorization'] = 'Bearer ' + key;
