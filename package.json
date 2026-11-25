@@ -1,0 +1,27 @@
+{
+  "name": "fast-indexer",
+  "version": "1.0.0",
+  "description": "Rapid URL Indexing Suite and Real-Time GUI Dashboard: Google Indexing API, IndexNow, Ping Cascade, and Headless Browser Telemetry",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.50.0"
+  },
+  "keywords": [
+    "seo",
+    "indexing",
+    "google-indexing-api",
+    "indexnow",
+    "ping-cascade",
+    "rapid-indexing",
+    "googlebot",
+    "bingbot"
+  ],
+  "author": "gusfing",
+  "license": "MIT"
+}

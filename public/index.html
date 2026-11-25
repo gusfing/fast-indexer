@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kawaki Rapid URL Indexer</title>
+  <style>
+    :root {
+      --indigo: #23003F;
+      --raised: #2E0B4F;
+      --deep: #18002C;
+      --yellow: #FFFDB4;
+      --lilac: #BCACCE;
+      --red: #F94500;
+      --green: #2ecc71;
+      --font-mono: 'Geist Mono', Consolas, Monaco, 'Courier New', monospace;
+      --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--indigo);
+      color: var(--yellow);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: var(--deep);
+      border-bottom: 1px solid rgba(188, 172, 206, 0.15);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-spark {
+      color: var(--red);
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--yellow);
+    }
+
+    .brand-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: var(--raised);
+      color: var(--lilac);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid rgba(188, 172, 206, 0.2);
+    }
+
+    .status-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--raised);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(188, 172, 206, 0.25);
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--raised);
+      border: 1px solid rgba(188, 172, 206, 0.2);
+      border-radius: 8px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--yellow);
+    }
+
+    .panel-subtitle {
+      font-size: 0.85rem;
+      color: var(--lilac);
+      margin-top: 0.2rem;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.5rem 0.85rem;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid rgba(188, 172, 206, 0.25);
+      background: var(--deep);
+      color: var(--yellow);
+      transition: all 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--yellow);
+      background: #23083e;
+    }
+
+    button.btn-primary {
+      background: var(--red);
+      color: #fff;
+      border-color: var(--red);
+      font-size: 0.85rem;
+      padding: 0.75rem 1.25rem;
+    }
+
+    button.btn-primary:hover:not(:disabled) {
+      background: #d63a00;
+      border-color: #d63a00;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    textarea {
+      width: 100%;
+      height: 220px;
+      background: var(--deep);
+      border: 1px solid rgba(188, 172, 206, 0.25);
+      border-radius: 4px;
+      color: var(--yellow);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      padding: 0.85rem;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--red);
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .actions-grid button {
+      padding: 0.65rem 0.5rem;
+      text-align: center;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    .stat-card {
+      background: var(--deep);
+      border: 1px solid rgba(188, 172, 206, 0.15);
+      padding: 0.75rem;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      color: var(--lilac);
+    }
+
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--yellow);
+      margin-top: 0.25rem;
+    }
+
+    .console-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .console-box {
+      flex: 1;
+      min-height: 380px;
+      max-height: 520px;
+      background: var(--deep);
+      border: 1px solid rgba(188, 172, 206, 0.2);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--lilac);
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .console-line {
+      margin-bottom: 0.25rem;
+    }
+
+    .console-line.success { color: var(--green); }
+    .console-line.warn { color: #f1c40f; }
+    .console-line.error { color: var(--red); }
+    .console-line.accent { color: var(--yellow); font-weight: bold; }
+
+    .history-section {
+      grid-column: 1 / -1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(188, 172, 206, 0.15);
+    }
+
+    th {
+      color: var(--lilac);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      color: var(--yellow);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .badge-success { background: rgba(46, 204, 113, 0.2); color: var(--green); border: 1px solid var(--green); }
+    .badge-error { background: rgba(249, 69, 0, 0.2); color: var(--red); border: 1px solid var(--red); }
+
+    footer {
+      background: var(--deep);
+      padding: 1rem 2rem;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--lilac);
+      border-top: 1px solid rgba(188, 172, 206, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-spark">✳</span>
+      <span class="brand-title">Kawaki Rapid Indexer</span>
+      <span class="brand-tag">v1.0 Local Edition</span>
+    </div>
+    <div class="status-pill">
+      <span class="dot" id="system-dot"></span>
+      <span id="system-status">Checking System...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Left Column: URL Inputs & Execution Triggers -->
+    <section class="panel">
+      <div>
+        <div class="panel-title">
+          <span>Target URLs</span>
+          <span class="panel-subtitle" id="url-count">0 URLs entered</span>
+        </div>
+        <div class="panel-subtitle">Enter one URL per line to dispatch across all indexing channels.</div>
+      </div>
+
+      <div class="toolbar">
+        <button id="btn-load-core">Load Core URLs (10)</button>
+        <button id="btn-clear">Clear</button>
+      </div>
+
+      <textarea id="url-input" placeholder="https://kawaki.co.in/services/custom-web-development&#10;https://kawaki.co.in/pricing&#10;https://kawaki.co.in/blog/what-is-ai-automation-examples-for-small-businesses"></textarea>
+
+      <div>
+        <div class="panel-title" style="margin-bottom: 0.5rem;">Launch Indexing Vectors</div>
+        <button id="btn-run-full" class="btn-primary" style="width: 100%; margin-bottom: 0.75rem;">
+          🚀 Execute Full 5-Stage Rapid Index
+        </button>
+
+        <div class="actions-grid">
+          <button id="btn-run-google">🌐 Google API Only</button>
+          <button id="btn-run-indexnow">📡 IndexNow Only</button>
+          <button id="btn-run-ping">⚡ Ping Cascade</button>
+          <button id="btn-run-browser">🖥️ Chrome Visits</button>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">Processed</div>
+          <div class="stat-value" id="stat-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Google API</div>
+          <div class="stat-value" id="stat-google">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">IndexNow</div>
+          <div class="stat-value" id="stat-indexnow">-</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Telemetry</div>
+          <div class="stat-value" id="stat-telemetry">0</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Live Stream Terminal -->
+    <section class="panel">
+      <div class="console-header">
+        <div>
+          <div class="panel-title">Real-Time Terminal Output</div>
+          <div class="panel-subtitle">Live events streamed from indexing workers</div>
+        </div>
+        <div class="toolbar">
+          <button id="btn-copy-log">Copy Logs</button>
+          <button id="btn-clear-log">Clear</button>
+        </div>
+      </div>
+
+      <div class="console-box" id="console-output">
+[Ready] System initialized. Enter URLs and select an execution mode above.
+      </div>
+    </section>
+
+    <!-- Bottom Row: Historical Executions -->
+    <section class="panel history-section">
+      <div class="panel-title">
+        <span>Execution History</span>
+        <button id="btn-refresh-history">Refresh History</button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Mode</th>
+              <th>URLs</th>
+              <th>Preflight</th>
+              <th>Google Queued</th>
+              <th>IndexNow</th>
+              <th>Chrome Visits</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--lilac);">No past executions recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Kawaki Studios &bull; Standalone Rapid Indexing Suite &bull; Google Indexing API v3 + IndexNow + WebSub + Telemetry
+  </footer>
+
+  <script>
+    const urlInput = document.getElementById('url-input');
+    const urlCount = document.getElementById('url-count');
+    const consoleOutput = document.getElementById('console-output');
+    const systemStatus = document.getElementById('system-status');
+    const systemDot = document.getElementById('system-dot');
+    const historyTbody = document.getElementById('history-tbody');
+
+    const statTotal = document.getElementById('stat-total');
+    const statGoogle = document.getElementById('stat-google');
+    const statIndexNow = document.getElementById('stat-indexnow');
+    const statTelemetry = document.getElementById('stat-telemetry');
+
+    const allButtons = [
+      document.getElementById('btn-run-full'),
+      document.getElementById('btn-run-google'),
+      document.getElementById('btn-run-indexnow'),
+      document.getElementById('btn-run-ping'),
+      document.getElementById('btn-run-browser')
+    ];
+
+    function updateUrlCount() {
+      const urls = getEnteredUrls();
+      urlCount.textContent = `${urls.length} URL(s) entered`;
+    }
+
+    urlInput.addEventListener('input', updateUrlCount);
+
+    function getEnteredUrls() {
+      return urlInput.value
+        .split('\n')
+        .map(u => u.trim())
+        .filter(u => u.startsWith('http://') || u.startsWith('https://'));
+    }
+
+    function appendLog(text, type = '') {
+      const line = document.createElement('div');
+      line.className = 'console-line ' + type;
+      line.textContent = text;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    // Load initial system status
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (data.serviceAccount) {
+          systemStatus.textContent = 'Google API & IndexNow Ready';
+          systemDot.style.background = 'var(--green)';
+        } else {
+          systemStatus.textContent = 'Service Account Missing';
+          systemDot.style.background = 'var(--red)';
+        }
+      } catch (err) {
+        systemStatus.textContent = 'Server Offline';
+        systemDot.style.background = 'var(--red)';
+      }
+    }
+
+    // Load core URLs
+    document.getElementById('btn-load-core').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/core-urls');
+        const data = await res.json();
+        if (data.urls && data.urls.length) {
+          urlInput.value = data.urls.join('\n');
+          updateUrlCount();
+          appendLog(`[INFO] Loaded ${data.urls.length} default core URLs into editor.`, 'accent');
+        }
+      } catch (err) {
+        appendLog(`[ERROR] Failed to load core URLs: ${err.message}`, 'error');
+      }
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      urlInput.value = '';
+      updateUrlCount();
+    });
+
+    document.getElementById('btn-clear-log').addEventListener('click', () => {
+      consoleOutput.innerHTML = '';
+    });
+
+    document.getElementById('btn-copy-log').addEventListener('click', () => {
+      navigator.clipboard.writeText(consoleOutput.innerText);
+      appendLog('[INFO] Console text copied to clipboard.', 'accent');
+    });
+
+    // Load history
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const data = await res.json();
+        if (data.history && data.history.length) {
+          historyTbody.innerHTML = '';
+          data.history.forEach(run => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(run.timestamp).toLocaleString();
+            tr.innerHTML = `
+              <td>${dateStr}</td>
+              <td><span class="badge badge-success">${run.mode.toUpperCase()}</span></td>
+              <td>${run.totalUrls}</td>
+              <td>${run.preflightPassed || '-'}</td>
+              <td>${run.googlePublished !== undefined ? run.googlePublished : '-'}</td>
+              <td>${run.indexNowStatus || '-'}</td>
+              <td>${run.browserVisits || '-'}</td>
+            `;
+            historyTbody.appendChild(tr);
+          });
+        }
+      } catch (err) {}
+    }
+
+    document.getElementById('btn-refresh-history').addEventListener('click', loadHistory);
+
+    // Run action
+    async function executeMode(mode) {
+      const urls = getEnteredUrls();
+      if (!urls.length) {
+        alert('Please enter at least one valid URL (starting with http:// or https://)');
+        return;
+      }
+
+      allButtons.forEach(b => b.disabled = true);
+      appendLog(`\n======================================================`, 'accent');
+      appendLog(`[LAUNCH] Dispatching ${urls.length} URL(s) in mode: ${mode.toUpperCase()}`, 'accent');
+      appendLog(`======================================================`, 'accent');
+
+      try {
+        const response = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls, mode })
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          appendLog(`[ERROR] ${err.error || 'Server error'}`, 'error');
+          allButtons.forEach(b => b.disabled = false);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop(); // keep remainder
+
+          for (const chunk of lines) {
+            const subLines = chunk.split('\n');
+            let event = '';
+            let dataStr = '';
+
+            for (const sl of subLines) {
+              if (sl.startsWith('event: ')) event = sl.replace('event: ', '').trim();
+              if (sl.startsWith('data: ')) dataStr = sl.replace('data: ', '').trim();
+            }
+
+            if (dataStr) {
+              try {
+                const data = JSON.parse(dataStr);
+                if (event === 'log') {
+                  const msg = data.message;
+                  let type = '';
+                  if (msg.includes('✓') || msg.includes('[OK]') || msg.includes('Complete') || msg.includes('Accepted')) type = 'success';
+                  if (msg.includes('⚠️') || msg.includes('[WARN]')) type = 'warn';
+                  if (msg.includes('[ERROR]') || msg.includes('Failed')) type = 'error';
+                  if (msg.startsWith('[Stage') || msg.startsWith('[START]')) type = 'accent';
+                  appendLog(msg, type);
+                } else if (event === 'done') {
+                  if (data.stats) {
+                    statTotal.textContent = data.stats.totalUrls || 0;
+                    statGoogle.textContent = data.stats.googlePublished || 0;
+                    statIndexNow.textContent = data.stats.indexNowStatus || 'Done';
+                    statTelemetry.textContent = data.stats.browserVisits || 0;
+                  }
+                  appendLog(`[SUCCESS] Run completed at ${new Date().toLocaleTimeString()}`, 'success');
+                  loadHistory();
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (err) {
+        appendLog(`[FATAL] Network error: ${err.message}`, 'error');
+      } finally {
+        allButtons.forEach(b => b.disabled = false);
+      }
+    }
+
+    document.getElementById('btn-run-full').addEventListener('click', () => executeMode('full'));
+    document.getElementById('btn-run-google').addEventListener('click', () => executeMode('google'));
+    document.getElementById('btn-run-indexnow').addEventListener('click', () => executeMode('indexnow'));
+    document.getElementById('btn-run-ping').addEventListener('click', () => executeMode('ping'));
+    document.getElementById('btn-run-browser').addEventListener('click', () => executeMode('browser'));
+
+    // Boot
+    checkStatus();
+    loadHistory();
+    updateUrlCount();
+  </script>
+</body>
+</html>
