@@ -458,6 +458,10 @@
             <div class="stat-label">IndexNow</div>
             <div class="stat-value" id="stat-indexnow">-</div>
           </div>
+          <div class="stat-card">
+            <div class="stat-label">Ping Cascade</div>
+            <div class="stat-value" id="stat-ping" style="color: #2ecc71;">-</div>
+          </div>
         </div>
       </section>
 
@@ -609,6 +613,7 @@
     const statPreflight = document.getElementById('stat-preflight');
     const statGoogle = document.getElementById('stat-google');
     const statIndexNow = document.getElementById('stat-indexnow');
+    const statPing = document.getElementById('stat-ping');
 
     const statBotGoogle = document.getElementById('stat-bot-google');
     const statBotBing = document.getElementById('stat-bot-bing');
@@ -922,6 +927,13 @@
                     statPreflight.textContent = data.stats.preflightPassed || 0;
                     statGoogle.textContent = data.stats.googlePublished || 0;
                     statIndexNow.textContent = data.stats.indexNowStatus || 'Done';
+                    if (data.stats.pingUrls) {
+                      statPing.textContent = `${data.stats.pingUrls}`;
+                    } else if (data.stats.pingCascade) {
+                      statPing.textContent = 'Active';
+                    } else {
+                      statPing.textContent = '-';
+                    }
                   }
                   appendLog(`[SUCCESS] Run completed at ${new Date().toLocaleTimeString()}`, 'success');
                   loadHistory();

@@ -99,6 +99,41 @@ function saveIsolatedFeed(feedId, urls = [], options = {}) {
   return { feedId, xml, feedPath: `/rss/${feedId}.xml` };
 }
 
+function saveChunkedFeeds(batchId, urls = [], options = {}, chunkSize = 100) {
+  ensureFeedsDir();
+  // 1. Save master feed
+  const master = saveIsolatedFeed(batchId, urls, options);
+  
+  // 2. If URLs > chunkSize, create chunked feeds for crawler syndication
+  const chunkFeeds = [];
+  if (urls.length > chunkSize) {
+    const totalChunks = Math.ceil(urls.length / chunkSize);
+    for (let i = 0; i < totalChunks; i++) {
+      const slice = urls.slice(i * chunkSize, (i + 1) * chunkSize);
+      const chunkId = `${batchId}_part${i + 1}`;
+      const chunkFeedUrl = options.feedUrl 
+        ? options.feedUrl.replace(`${batchId}.xml`, `${chunkId}.xml`)
+        : `/rss/${chunkId}.xml`;
+
+      const chunkResult = saveIsolatedFeed(chunkId, slice, {
+        ...options,
+        title: `${options.title || 'Rapid Index Batch'} [Part ${i + 1}/${totalChunks}]`,
+        feedUrl: chunkFeedUrl
+      });
+
+      chunkFeeds.push({
+        chunkId,
+        urlCount: slice.length,
+        feedUrl: chunkFeedUrl,
+        sampleStart: i * chunkSize + 1,
+        sampleEnd: i * chunkSize + slice.length
+      });
+    }
+  }
+
+  return { master, chunkFeeds };
+}
+
 function getFeedXml(feedId) {
   ensureFeedsDir();
   const filename = feedId === 'latest' ? 'latest.xml' : `${feedId}.xml`;
@@ -141,6 +176,7 @@ function listFeeds() {
 module.exports = {
   generateRssXml,
   saveIsolatedFeed,
+  saveChunkedFeeds,
   getFeedXml,
   listFeeds
 };

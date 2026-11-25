@@ -18,9 +18,9 @@ const { URL } = require('url');
 const { validateUrls } = require('./modules/preflight');
 const { publishGoogleIndex } = require('./modules/google-indexer');
 const { submitIndexNow } = require('./modules/indexnow');
-const { runPingCascade } = require('./modules/ping-cascade');
+const { runPingCascade, runBulkPingCascade } = require('./modules/ping-cascade');
 const { visitUrlsWithChrome } = require('./modules/browser-ping');
-const { saveIsolatedFeed, getFeedXml, listFeeds } = require('./modules/rss-generator');
+const { saveIsolatedFeed, saveChunkedFeeds, getFeedXml, listFeeds } = require('./modules/rss-generator');
 const { recordBotVisit, readBotLogs, getBotStats } = require('./modules/bot-logger');
 
 const PORT = process.env.PORT || 4040;
@@ -231,14 +231,14 @@ const server = http.createServer(async (req, res) => {
 
       logger(`[API Start] Dispatching batch ${batchId} with ${urls.length} URLs in mode: ${mode.toUpperCase()}`);
 
-      // 1. Generate Isolated RSS Feed
+      // 1. Generate Isolated RSS Feed & Syndication Chunks
       const isolatedFeedUrl = `${currentBaseUrl}/rss/${batchId}.xml`;
-      saveIsolatedFeed(batchId, urls, {
+      saveChunkedFeeds(batchId, urls, {
         title: payload.siteName || `Indexing Batch ${batchId}`,
         siteUrl: payload.siteUrl || (urls[0] ? new URL(urls[0]).origin : currentBaseUrl),
         feedUrl: isolatedFeedUrl
-      });
-      logger(`Isolated RSS feed published: ${isolatedFeedUrl}`);
+      }, 100);
+      logger(`Isolated RSS feed and chunks published for ${urls.length} URLs: ${isolatedFeedUrl}`);
 
       const stats = {
         batchId,
@@ -280,8 +280,9 @@ const server = http.createServer(async (req, res) => {
 
         // Stage 4: Multi-Hub Isolated Ping Cascade
         if (mode === 'full' || mode === 'ping') {
-          const pingRes = await runPingCascade(logger, isolatedFeedUrl, payload.siteName, payload.siteUrl);
+          const pingRes = await runBulkPingCascade(logger, urls, batchId, currentBaseUrl, payload.siteName, payload.siteUrl);
           stats.pingCascade = pingRes;
+          stats.pingUrls = urls.length;
         }
 
         // Stage 5: Chrome Telemetry
@@ -339,12 +340,12 @@ const server = http.createServer(async (req, res) => {
       const batchId = 'feed_' + Date.now();
       const isolatedFeedUrl = `${currentBaseUrl}/rss/${batchId}.xml`;
 
-      // Generate isolated RSS feed immediately for this batch
-      saveIsolatedFeed(batchId, urls, {
+      // Generate isolated RSS feed and chunks immediately for this batch
+      saveChunkedFeeds(batchId, urls, {
         title: `Rapid Index Feed ${batchId}`,
         siteUrl: urls[0] ? new URL(urls[0]).origin : currentBaseUrl,
         feedUrl: isolatedFeedUrl
-      });
+      }, 100);
 
       // Initialize SSE stream
       res.writeHead(200, {
@@ -411,9 +412,10 @@ const server = http.createServer(async (req, res) => {
 
         // Stage 4: Multi-Hub Isolated RSS & XML-RPC Ping Cascade
         if (mode === 'full' || mode === 'ping') {
-          log(`[Stage 4] Dispatching multi-hub pings for isolated feed: ${isolatedFeedUrl}...`);
-          const pingRes = await runPingCascade(log, isolatedFeedUrl);
+          log(`[Stage 4] Dispatching multi-hub pings for ${urls.length} URL(s)...`);
+          const pingRes = await runBulkPingCascade(log, urls, batchId, currentBaseUrl, siteHost, `https://${siteHost}`);
           stats.pingCascade = pingRes;
+          stats.pingUrls = urls.length;
         }
 
         // Stage 5: Headless Browser Telemetry
