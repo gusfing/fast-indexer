@@ -75,6 +75,7 @@
       display: flex;
       gap: 0.75rem;
       align-items: center;
+      flex-wrap: wrap;
     }
 
     .status-pill {
@@ -147,6 +148,7 @@
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     button {
@@ -193,23 +195,54 @@
       cursor: not-allowed;
     }
 
-    textarea {
+    textarea, input[type="text"], input[type="password"] {
       width: 100%;
-      height: 220px;
       background: var(--deep);
       border: 1px solid rgba(188, 172, 206, 0.25);
       border-radius: 4px;
       color: var(--yellow);
       font-family: var(--font-mono);
       font-size: 0.85rem;
-      padding: 0.85rem;
+      padding: 0.65rem 0.85rem;
+    }
+
+    textarea {
+      height: 200px;
       resize: vertical;
       line-height: 1.5;
     }
 
-    textarea:focus {
+    textarea:focus, input:focus {
       outline: none;
       border-color: var(--red);
+    }
+
+    .settings-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      background: var(--deep);
+      padding: 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(188, 172, 206, 0.15);
+    }
+
+    @media (max-width: 768px) {
+      .settings-row { grid-template-columns: 1fr; }
+    }
+
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .setting-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--lilac);
     }
 
     .actions-grid {
@@ -255,7 +288,7 @@
     .console-box {
       flex: 1;
       min-height: 400px;
-      max-height: 520px;
+      max-height: 540px;
       background: var(--deep);
       border: 1px solid rgba(188, 172, 206, 0.2);
       border-radius: 6px;
@@ -337,7 +370,7 @@
     <div class="brand">
       <span class="brand-spark">⚡</span>
       <span class="brand-title">Fast Indexer</span>
-      <span class="brand-tag">v2.0 VPS & API Edition</span>
+      <span class="brand-tag">v2.1 High-Scale Edition</span>
     </div>
     <div class="header-pills">
       <div class="status-pill">
@@ -347,11 +380,33 @@
       <a href="/rss/latest.xml" target="_blank" style="text-decoration: none;">
         <span class="api-badge">📡 Live RSS</span>
       </a>
-      <span class="api-badge" id="api-endpoint-badge">REST API: /api/v1/index</span>
+      <span class="api-badge">REST API: /api/v1/index</span>
     </div>
   </header>
 
   <main>
+    <!-- Settings & Key Configuration Drawer -->
+    <section class="panel" style="gap: 0.75rem;">
+      <div class="panel-title">
+        <span>⚙️ Indexing & Protocol Configuration</span>
+        <span class="panel-subtitle">Configure API Key, IndexNow Key, and Target Host</span>
+      </div>
+      <div class="settings-row">
+        <div class="setting-group">
+          <label class="setting-label">API Key (Optional / Auth)</label>
+          <input type="password" id="input-api-key" placeholder="Enter API Key if configured on VPS" />
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">IndexNow Verification Key</label>
+          <input type="text" id="input-indexnow-key" value="262ab81b1de8469b20c5678a83f31ba5" />
+        </div>
+        <div class="setting-group">
+          <label class="setting-label">Target Hostname</label>
+          <input type="text" id="input-site-host" value="kawaki.co.in" />
+        </div>
+      </div>
+    </section>
+
     <!-- Row 1: Target URLs & Live Terminal -->
     <div class="grid-2">
       <!-- Left: Input & Launch -->
@@ -361,11 +416,12 @@
             <span>Target URLs Batch</span>
             <span class="panel-subtitle" id="url-count">0 URLs entered</span>
           </div>
-          <div class="panel-subtitle">Generates an isolated RSS feed and triggers real-time search engine crawls.</div>
+          <div class="panel-subtitle">Accepts 1 to 10,000 URLs. Automatically chunks and fires across all engines.</div>
         </div>
 
         <div class="toolbar">
           <button id="btn-load-core">Load Core URLs</button>
+          <button id="btn-gen-2000" style="color: #5dade2; border-color: #5dade2;">⚡ Generate 2,000 URLs Batch</button>
           <button id="btn-clear">Clear</button>
         </div>
 
@@ -374,13 +430,13 @@
         <div>
           <div class="panel-title" style="margin-bottom: 0.5rem;">Launch Indexing Vectors</div>
           <button id="btn-run-full" class="btn-primary" style="width: 100%; margin-bottom: 0.75rem;">
-            🚀 Execute Full 5-Stage Rapid Index
+            🚀 Execute Full Rapid Index (All 5 Vectors)
           </button>
 
           <div class="actions-grid">
             <button id="btn-run-google">🌐 Google API Only</button>
             <button id="btn-run-indexnow">📡 IndexNow Only</button>
-            <button id="btn-run-ping">⚡ Isolated Ping</button>
+            <button id="btn-run-ping">⚡ Multi-Hub Ping</button>
             <button id="btn-run-browser">🖥️ Chrome Visits</button>
           </div>
         </div>
@@ -391,16 +447,16 @@
             <div class="stat-value" id="stat-total">0</div>
           </div>
           <div class="stat-card">
+            <div class="stat-label">Preflight OK</div>
+            <div class="stat-value" id="stat-preflight">0</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-label">Google API</div>
             <div class="stat-value" id="stat-google">0</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">IndexNow</div>
             <div class="stat-value" id="stat-indexnow">-</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Browser Visits</div>
-            <div class="stat-value" id="stat-telemetry">0</div>
           </div>
         </div>
       </section>
@@ -410,7 +466,7 @@
         <div class="console-header">
           <div>
             <div class="panel-title">Real-Time Terminal Stream</div>
-            <div class="panel-subtitle">Server-Sent Events from crawling workers</div>
+            <div class="panel-subtitle">Live Server-Sent Events from crawling workers</div>
           </div>
           <div class="toolbar">
             <button id="btn-copy-log">Copy Logs</button>
@@ -535,7 +591,7 @@
   </main>
 
   <footer>
-    Fast Indexer &bull; Production VPS & REST API Edition &bull; Multi-Engine Rapid Crawl Infrastructure
+    Fast Indexer &bull; High-Scale Rapid Crawl Suite &bull; Multi-Engine Infrastructure
   </footer>
 
   <script>
@@ -544,11 +600,15 @@
     const consoleOutput = document.getElementById('console-output');
     const systemStatus = document.getElementById('system-status');
     const systemDot = document.getElementById('system-dot');
+
+    const inputApiKey = document.getElementById('input-api-key');
+    const inputIndexNowKey = document.getElementById('input-indexnow-key');
+    const inputSiteHost = document.getElementById('input-site-host');
     
     const statTotal = document.getElementById('stat-total');
+    const statPreflight = document.getElementById('stat-preflight');
     const statGoogle = document.getElementById('stat-google');
     const statIndexNow = document.getElementById('stat-indexnow');
-    const statTelemetry = document.getElementById('stat-telemetry');
 
     const statBotGoogle = document.getElementById('stat-bot-google');
     const statBotBing = document.getElementById('stat-bot-bing');
@@ -569,9 +629,36 @@
 
     let currentBotFilter = 'all';
 
+    // Persist API settings in localStorage
+    if (localStorage.getItem('fast_api_key')) inputApiKey.value = localStorage.getItem('fast_api_key');
+    if (localStorage.getItem('fast_indexnow_key')) inputIndexNowKey.value = localStorage.getItem('fast_indexnow_key');
+    if (localStorage.getItem('fast_site_host')) inputSiteHost.value = localStorage.getItem('fast_site_host');
+
+    inputApiKey.addEventListener('change', () => localStorage.setItem('fast_api_key', inputApiKey.value));
+    inputIndexNowKey.addEventListener('change', () => localStorage.setItem('fast_indexnow_key', inputIndexNowKey.value));
+    inputSiteHost.addEventListener('change', () => localStorage.setItem('fast_site_host', inputSiteHost.value));
+
+    function getAuthHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      const key = inputApiKey.value.trim();
+      if (key) {
+        headers['X-API-Key'] = key;
+        headers['Authorization'] = 'Bearer ' + key;
+      }
+      return headers;
+    }
+
     function updateUrlCount() {
       const urls = getEnteredUrls();
       urlCount.textContent = `${urls.length} URL(s) entered`;
+      if (urls[0]) {
+        try {
+          const derivedHost = new URL(urls[0]).hostname;
+          if (derivedHost && !localStorage.getItem('fast_site_host')) {
+            inputSiteHost.value = derivedHost;
+          }
+        } catch (e) {}
+      }
     }
 
     urlInput.addEventListener('input', updateUrlCount);
@@ -628,7 +715,7 @@
     async function loadBotLogs() {
       try {
         const filterParam = currentBotFilter === 'google' ? '?bot=google' : '';
-        const res = await fetch('/api/v1/bot-logs' + filterParam);
+        const res = await fetch('/api/v1/bot-logs' + filterParam, { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.stats) updateBotStats(data.stats);
 
@@ -656,7 +743,7 @@
     // Load Feeds
     async function loadFeeds() {
       try {
-        const res = await fetch('/api/v1/feeds');
+        const res = await fetch('/api/v1/feeds', { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.feeds && data.feeds.length) {
           feedsTbody.innerHTML = '';
@@ -677,7 +764,7 @@
     // Load History
     async function loadHistory() {
       try {
-        const res = await fetch('/api/history');
+        const res = await fetch('/api/history', { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.history && data.history.length) {
           historyTbody.innerHTML = '';
@@ -710,6 +797,24 @@
       } catch (err) {
         appendLog(`[ERROR] Failed to load core URLs: ${err.message}`, 'error');
       }
+    });
+
+    // Generate 2000 URLs stress test
+    document.getElementById('btn-gen-2000').addEventListener('click', () => {
+      const host = inputSiteHost.value.trim() || 'kawaki.co.in';
+      const samplePaths = [
+        'services/custom-web-development', 'pricing', 'about', 'contact', 'solutions/healthcare',
+        'delhi/web-development-company', 'bangalore/seo-company', 'mumbai/web-development-company',
+        'blog/what-is-ai-automation-examples-for-small-businesses', 'blog/nextjs-performance-architecture'
+      ];
+      const batch = [];
+      for (let i = 1; i <= 2000; i++) {
+        const p = samplePaths[i % samplePaths.length];
+        batch.push(`https://${host}/${p}?batch_item=${i}`);
+      }
+      urlInput.value = batch.join('\n');
+      updateUrlCount();
+      appendLog(`[INFO] Generated 2,000 real URL batch targets under https://${host}`, 'accent');
     });
 
     document.getElementById('btn-clear').addEventListener('click', () => {
@@ -758,15 +863,22 @@
       appendLog(`======================================================`, 'accent');
 
       try {
+        const payload = {
+          urls,
+          mode,
+          indexNowKey: inputIndexNowKey.value.trim(),
+          siteHost: inputSiteHost.value.trim()
+        };
+
         const response = await fetch('/api/run', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ urls, mode })
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-          const err = await response.json();
-          appendLog(`[ERROR] ${err.error || 'Server error'}`, 'error');
+          const err = await response.json().catch(() => ({}));
+          appendLog(`[ERROR] ${err.error || response.statusText || 'Server error'}`, 'error');
           allButtons.forEach(b => b.disabled = false);
           return;
         }
@@ -802,14 +914,14 @@
                   if (msg.includes('✓') || msg.includes('[OK]') || msg.includes('Complete') || msg.includes('Accepted')) type = 'success';
                   if (msg.includes('⚠️') || msg.includes('[WARN]')) type = 'warn';
                   if (msg.includes('[ERROR]') || msg.includes('Failed')) type = 'error';
-                  if (msg.startsWith('[Stage') || msg.startsWith('[START]') || msg.startsWith('[RSS]')) type = 'accent';
+                  if (msg.startsWith('[Stage') || msg.startsWith('[START]') || msg.startsWith('[RSS]') || msg.startsWith('[IndexNow]')) type = 'accent';
                   appendLog(msg, type);
                 } else if (event === 'done') {
                   if (data.stats) {
                     statTotal.textContent = data.stats.totalUrls || 0;
+                    statPreflight.textContent = data.stats.preflightPassed || 0;
                     statGoogle.textContent = data.stats.googlePublished || 0;
                     statIndexNow.textContent = data.stats.indexNowStatus || 'Done';
-                    statTelemetry.textContent = data.stats.browserVisits || 0;
                   }
                   appendLog(`[SUCCESS] Run completed at ${new Date().toLocaleTimeString()}`, 'success');
                   loadHistory();

@@ -1,6 +1,7 @@
 /**
  * Headless Chrome Browser Telemetry Simulator
  * Loads target URLs in headless Chrome to trigger analytics and browser signals.
+ * Handles bulk lists with adaptive sampling.
  */
 
 const path = require('path');
@@ -21,7 +22,7 @@ function getPlaywright() {
   return null;
 }
 
-async function visitUrlsWithChrome(urls = [], onLog = console.log) {
+async function visitUrlsWithChrome(urls = [], onLog = console.log, maxVisits = 30) {
   if (!urls.length) {
     onLog('No URLs provided for browser telemetry.');
     return { visited: 0, failed: 0 };
@@ -33,6 +34,13 @@ async function visitUrlsWithChrome(urls = [], onLog = console.log) {
     return { visited: 0, failed: 0, skipped: true };
   }
 
+  const sample = urls.length > maxVisits ? urls.slice(0, maxVisits) : urls;
+  if (urls.length > maxVisits) {
+    onLog(`[Browser Telemetry] Bulk batch detected (${urls.length} URLs). Simulating organic visits on top ${maxVisits} priority sample URLs...`);
+  } else {
+    onLog(`[Browser Telemetry] Simulating organic browser visits for ${sample.length} URL(s)...`);
+  }
+
   const { chromium } = pw;
   let browser;
   try {
@@ -42,7 +50,7 @@ async function visitUrlsWithChrome(urls = [], onLog = console.log) {
       browser = await chromium.launch({ headless: true });
     } catch (err2) {
       onLog(`[WARN] Could not launch Chrome headless: ${err2.message}`);
-      return { visited: 0, failed: urls.length, error: err2.message };
+      return { visited: 0, failed: sample.length, error: err2.message };
     }
   }
 
@@ -52,20 +60,19 @@ async function visitUrlsWithChrome(urls = [], onLog = console.log) {
   });
 
   const page = await context.newPage();
-  onLog(`Simulating organic browser visits for ${urls.length} URL(s)...`);
 
   let visited = 0;
   let failed = 0;
 
-  for (const url of urls) {
+  for (const url of sample) {
     try {
       const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(1500);
       const status = response ? response.status() : 'OK';
-      onLog(`   [VISITED] ${url} (HTTP ${status})`);
+      onLog(`   ✓ [Visited] ${url} (HTTP ${status})`);
       visited++;
     } catch (err) {
-      onLog(`   [WARN] ${url}: ${err.message}`);
+      onLog(`   ⚠️ [Visit Warning] ${url}: ${err.message}`);
       failed++;
     }
   }

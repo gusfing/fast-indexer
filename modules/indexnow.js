@@ -1,41 +1,76 @@
 /**
  * IndexNow Protocol Module (Bing, Yandex, Seznam, Naver)
+ * Supports custom verification keys, auto-derived hostnames, and bulk submissions up to 10,000 URLs.
  */
 
-const KEY = '262ab81b1de8469b20c5678a83f31ba5';
-const HOST = 'kawaki.co.in';
+const DEFAULT_KEY = process.env.INDEXNOW_KEY || '262ab81b1de8469b20c5678a83f31ba5';
+const DEFAULT_HOST = process.env.SITE_HOST || 'kawaki.co.in';
 
-async function submitIndexNow(urls = [], onLog = console.log) {
+async function submitIndexNow(urls = [], onLog = console.log, customKey = null, customHost = null) {
   if (!urls.length) return { success: false, message: 'No URLs provided' };
 
-  onLog(`Submitting ${urls.length} URL(s) to IndexNow endpoint (Bing/IndexNow network)...`);
+  const key = customKey || DEFAULT_KEY;
+  let host = customHost;
 
-  try {
-    const res = await fetch('https://www.bing.com/indexnow', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({
-        host: HOST,
-        key: KEY,
-        keyLocation: `https://${HOST}/${KEY}.txt`,
-        urlList: urls
-      }),
-      signal: AbortSignal.timeout(15000)
-    });
-
-    const isOk = res.status === 200 || res.status === 202;
-    if (isOk) {
-      onLog(`[IndexNow OK] HTTP ${res.status} Accepted: ${urls.length} URL(s) queued for crawl.`);
-      return { success: true, status: res.status, count: urls.length };
-    } else {
-      const txt = await res.text();
-      onLog(`[IndexNow Failed] HTTP ${res.status}: ${txt}`);
-      return { success: false, status: res.status, error: txt };
-    }
-  } catch (err) {
-    onLog(`[IndexNow Network Error]: ${err.message}`);
-    return { success: false, error: err.message };
+  if (!host && urls[0]) {
+    try {
+      host = new URL(urls[0]).hostname;
+    } catch (e) {}
   }
+  if (!host) host = DEFAULT_HOST;
+
+  const keyLocation = `https://${host}/${key}.txt`;
+  onLog(`[IndexNow] Preparing payload for ${urls.length} URL(s) under host: ${host} (Key: ${key.slice(0, 8)}...)`);
+
+  // Endpoints: Primary IndexNow Hub & Bing IndexNow
+  const endpoints = [
+    { name: 'IndexNow Central Hub', url: 'https://api.indexnow.org/indexnow' },
+    { name: 'Bing IndexNow', url: 'https://www.bing.com/indexnow' }
+  ];
+
+  const payload = {
+    host,
+    key,
+    keyLocation,
+    urlList: urls
+  };
+
+  let anySuccess = false;
+  let lastStatus = 0;
+  let lastError = null;
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(20000)
+      });
+
+      lastStatus = res.status;
+      if (res.status === 200 || res.status === 202) {
+        onLog(`   ✓ [${ep.name}] HTTP ${res.status} Accepted: ${urls.length} URL(s) queued for crawl.`);
+        anySuccess = true;
+      } else {
+        const txt = await res.text();
+        onLog(`   ⚠️ [${ep.name}] HTTP ${res.status}: ${txt || 'Non-200 response'}`);
+        lastError = txt;
+      }
+    } catch (err) {
+      onLog(`   ⚠️ [${ep.name}] Error: ${err.message}`);
+      lastError = err.message;
+    }
+  }
+
+  return {
+    success: anySuccess,
+    status: lastStatus,
+    count: urls.length,
+    host,
+    key: key.slice(0, 8) + '...',
+    error: anySuccess ? null : lastError
+  };
 }
 
 module.exports = { submitIndexNow };

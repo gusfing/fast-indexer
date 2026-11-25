@@ -1,7 +1,9 @@
 /**
- * Fast Indexer - Production HTTP & REST API Server
+ * Fast Indexer - Production HTTP & REST API Server (v2.1 High-Scale Edition)
  * Features:
- * - Direct Multi-Engine Rapid Indexing
+ * - Direct Multi-Engine Rapid Indexing for up to 10,000 URLs
+ * - Configurable IndexNow verification key & auto-serving (/:key.txt)
+ * - Multi-hub Search Engine Ping Cascade (Google WebSub, Ping-o-Matic, Twingly, Blo.gs, WeblogUpdates)
  * - Isolated RSS 2.0 Feed Generation & Serving (/rss/:id.xml)
  * - Real-Time Search Engine & Googlebot Crawl Telemetry (/api/v1/bot-logs)
  * - REST API v1 with API Key Authentication (/api/v1/index)
@@ -24,6 +26,7 @@ const { recordBotVisit, readBotLogs, getBotStats } = require('./modules/bot-logg
 const PORT = process.env.PORT || 4040;
 const API_KEY = process.env.API_KEY || null;
 const BASE_URL = process.env.BASE_URL || null;
+const DEFAULT_INDEXNOW_KEY = process.env.INDEXNOW_KEY || '262ab81b1de8469b20c5678a83f31ba5';
 
 const DATA_DIR = path.join(__dirname, 'data');
 const HISTORY_FILE = path.join(DATA_DIR, 'history.json');
@@ -70,7 +73,6 @@ const server = http.createServer(async (req, res) => {
   const pathname = parsedUrl.pathname;
 
   // Real-time Search Engine Crawler / Googlebot Tracker
-  // Inspects every request to detect Googlebot, Bingbot, etc.
   try {
     recordBotVisit(req, { endpoint: pathname });
   } catch (bErr) {}
@@ -83,6 +85,17 @@ const server = http.createServer(async (req, res) => {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key'
     });
     return res.end();
+  }
+
+  // Dynamic IndexNow Key verification file responder
+  // Allows search engines (Bing, Yandex) to verify ownership by visiting /<key>.txt
+  if (pathname.endsWith('.txt') && !pathname.slice(1).includes('/')) {
+    const requestedKey = pathname.replace(/^\//, '').replace(/\.txt$/, '');
+    const configuredKey = process.env.INDEXNOW_KEY || DEFAULT_INDEXNOW_KEY;
+    if (requestedKey === configuredKey) {
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end(configuredKey);
+    }
   }
 
   // Static GUI Dashboard
@@ -141,9 +154,12 @@ const server = http.createServer(async (req, res) => {
       serviceAccount: hasServiceAccount,
       googleapis: hasGoogleapis,
       authRequired: Boolean(API_KEY),
+      apiKeyConfigured: Boolean(API_KEY),
       baseUrl: currentBaseUrl,
       botTelemetry: botStats,
-      indexNowKey: process.env.INDEXNOW_KEY || '262ab81b1de8469b20c5678a83f31ba5'
+      indexNowKey: DEFAULT_INDEXNOW_KEY,
+      maxBatchCapacity: 10000,
+      pingCascadeHubs: 6
     });
   }
 
@@ -186,7 +202,7 @@ const server = http.createServer(async (req, res) => {
   // ========================================================
   if (pathname === '/api/v1/index' && req.method === 'POST') {
     if (!isAuthorized(req)) {
-      return sendJson(res, 401, { error: 'Unauthorized: Invalid or missing API key.' });
+      return sendJson(res, 401, { error: 'Unauthorized: Invalid or missing API key. Send header X-API-Key: your_key' });
     }
 
     let body = '';
@@ -202,6 +218,8 @@ const server = http.createServer(async (req, res) => {
       const rawUrls = Array.isArray(payload.urls) ? payload.urls : [];
       const urls = rawUrls.map(u => String(u).trim()).filter(u => u.startsWith('http://') || u.startsWith('https://'));
       const mode = payload.mode || 'full';
+      const indexNowKey = payload.indexNowKey || DEFAULT_INDEXNOW_KEY;
+      const siteHost = payload.siteHost || (urls[0] ? new URL(urls[0]).hostname : 'kawaki.co.in');
 
       if (!urls.length) {
         return sendJson(res, 400, { error: 'No valid URLs provided.' });
@@ -239,14 +257,14 @@ const server = http.createServer(async (req, res) => {
       try {
         // Stage 1: Pre-flight
         if (mode === 'full' || mode === 'google' || mode === 'indexnow') {
-          const checks = await validateUrls(urls, logger);
+          const checks = await validateUrls(urls, logger, 25);
           stats.preflightPassed = checks.filter(r => r.valid).length;
         }
 
         // Stage 2: Google API
         if (mode === 'full' || mode === 'google') {
           try {
-            const googleResults = await publishGoogleIndex(urls, logger);
+            const googleResults = await publishGoogleIndex(urls, logger, 5);
             stats.googlePublished = googleResults.filter(r => r.success).length;
             stats.googleFailed = googleResults.filter(r => !r.success).length;
           } catch (gErr) {
@@ -254,13 +272,13 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        // Stage 3: IndexNow
+        // Stage 3: IndexNow (Multi-Hub)
         if (mode === 'full' || mode === 'indexnow') {
-          const inRes = await submitIndexNow(urls, logger);
+          const inRes = await submitIndexNow(urls, logger, indexNowKey, siteHost);
           stats.indexNowStatus = inRes.success ? 'Success' : inRes.error;
         }
 
-        // Stage 4: Isolated Ping Cascade
+        // Stage 4: Multi-Hub Isolated Ping Cascade
         if (mode === 'full' || mode === 'ping') {
           const pingRes = await runPingCascade(logger, isolatedFeedUrl, payload.siteName, payload.siteUrl);
           stats.pingCascade = pingRes;
@@ -268,7 +286,7 @@ const server = http.createServer(async (req, res) => {
 
         // Stage 5: Chrome Telemetry
         if (mode === 'full' || mode === 'browser') {
-          const bRes = await visitUrlsWithChrome(urls, logger);
+          const bRes = await visitUrlsWithChrome(urls, logger, 30);
           stats.browserVisits = bRes.visited || 0;
         }
 
@@ -294,6 +312,10 @@ const server = http.createServer(async (req, res) => {
   // SSE STREAMING FOR WEB GUI: POST /api/run
   // ========================================================
   if (pathname === '/api/run' && req.method === 'POST') {
+    if (!isAuthorized(req)) {
+      return sendJson(res, 401, { error: 'Unauthorized: Invalid API key. Please configure your API key in Dashboard Settings.' });
+    }
+
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', async () => {
@@ -307,6 +329,8 @@ const server = http.createServer(async (req, res) => {
       const rawUrls = Array.isArray(payload.urls) ? payload.urls : [];
       const urls = rawUrls.map(u => String(u).trim()).filter(u => u.startsWith('http://') || u.startsWith('https://'));
       const mode = payload.mode || 'full';
+      const indexNowKey = payload.indexNowKey || DEFAULT_INDEXNOW_KEY;
+      const siteHost = payload.siteHost || (urls[0] ? new URL(urls[0]).hostname : 'kawaki.co.in');
 
       if (!urls.length) {
         return sendJson(res, 400, { error: 'No valid URLs provided.' });
@@ -356,10 +380,10 @@ const server = http.createServer(async (req, res) => {
       };
 
       try {
-        // Stage 1: Pre-flight checks
+        // Stage 1: Pre-flight checks with concurrency
         if (mode === 'full' || mode === 'google' || mode === 'indexnow') {
-          log('[Stage 1] Performing pre-flight canonical & HTTP status verification...');
-          const checkResults = await validateUrls(urls, log);
+          log('[Stage 1] Performing high-speed pre-flight verification...');
+          const checkResults = await validateUrls(urls, log, 25);
           const validUrls = checkResults.filter(r => r.valid).map(r => r.url);
           stats.preflightPassed = validUrls.length;
           log(`Preflight complete: ${validUrls.length}/${urls.length} passed.`);
@@ -369,7 +393,7 @@ const server = http.createServer(async (req, res) => {
         if (mode === 'full' || mode === 'google') {
           log('[Stage 2] Publishing batch to Google Indexing API...');
           try {
-            const googleResults = await publishGoogleIndex(urls, log);
+            const googleResults = await publishGoogleIndex(urls, log, 5);
             stats.googlePublished = googleResults.filter(r => r.success).length;
             stats.googleFailed = googleResults.filter(r => !r.success).length;
             log(`Google API finished: ${stats.googlePublished} published, ${stats.googleFailed} failed.`);
@@ -378,16 +402,16 @@ const server = http.createServer(async (req, res) => {
           }
         }
 
-        // Stage 3: IndexNow (Bing / Yandex)
+        // Stage 3: IndexNow (Multi-Hub)
         if (mode === 'full' || mode === 'indexnow') {
-          log('[Stage 3] Pinging IndexNow protocol endpoint...');
-          const indexNowRes = await submitIndexNow(urls, log);
+          log('[Stage 3] Pinging IndexNow protocol endpoints (Bing/Yandex/Seznam)...');
+          const indexNowRes = await submitIndexNow(urls, log, indexNowKey, siteHost);
           stats.indexNowStatus = indexNowRes.success ? 'Success' : (indexNowRes.error || 'Failed');
         }
 
-        // Stage 4: Isolated RSS & XML-RPC Ping Cascade
+        // Stage 4: Multi-Hub Isolated RSS & XML-RPC Ping Cascade
         if (mode === 'full' || mode === 'ping') {
-          log(`[Stage 4] Dispatching XML-RPC & WebSub pings for isolated feed: ${isolatedFeedUrl}...`);
+          log(`[Stage 4] Dispatching multi-hub pings for isolated feed: ${isolatedFeedUrl}...`);
           const pingRes = await runPingCascade(log, isolatedFeedUrl);
           stats.pingCascade = pingRes;
         }
@@ -395,7 +419,7 @@ const server = http.createServer(async (req, res) => {
         // Stage 5: Headless Browser Telemetry
         if (mode === 'full' || mode === 'browser') {
           log('[Stage 5] Starting Headless Chrome telemetry simulation...');
-          const browserRes = await visitUrlsWithChrome(urls, log);
+          const browserRes = await visitUrlsWithChrome(urls, log, 30);
           stats.browserVisits = browserRes.visited || 0;
         }
 
@@ -435,10 +459,10 @@ server.on('error', (err) => {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
-  console.log(`🚀 Fast Indexer Server & REST API active at:`);
+  console.log(`🚀 Fast Indexer Server active at:`);
   console.log(`   Local URL:    http://localhost:${PORT}`);
   console.log(`   REST API:     http://localhost:${PORT}/api/v1/index`);
   console.log(`   Bot Tracker:  http://localhost:${PORT}/api/v1/bot-logs`);
-  console.log(`   RSS Feeds:    http://localhost:${PORT}/rss/latest.xml`);
+  console.log(`   IndexNow Key: ${DEFAULT_INDEXNOW_KEY}`);
   console.log(`======================================================\n`);
 });
