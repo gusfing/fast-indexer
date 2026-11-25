@@ -1,6 +1,8 @@
 node_modules/
 service-account.json
 data/history.json
+data/bot-logs.json
+data/feeds/
 .env
 *.log
 .DS_Store

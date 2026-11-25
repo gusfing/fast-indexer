@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kawaki Rapid URL Indexer</title>
+  <title>Fast Indexer - Multi-Engine Rapid URL Indexing & Crawler Telemetry</title>
   <style>
     :root {
       --indigo: #23003F;
@@ -13,6 +13,7 @@
       --lilac: #BCACCE;
       --red: #F94500;
       --green: #2ecc71;
+      --blue: #3498db;
       --font-mono: 'Geist Mono', Consolas, Monaco, 'Courier New', monospace;
       --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
@@ -35,6 +36,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
 
     .brand {
@@ -68,6 +71,12 @@
       border: 1px solid rgba(188, 172, 206, 0.2);
     }
 
+    .header-pills {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
     .status-pill {
       font-family: var(--font-mono);
       font-size: 0.75rem;
@@ -91,16 +100,22 @@
     main {
       flex: 1;
       padding: 2rem;
-      max-width: 1400px;
+      max-width: 1440px;
       width: 100%;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 2rem;
     }
 
     @media (max-width: 1024px) {
-      main { grid-template-columns: 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
     }
 
     .panel {
@@ -167,6 +182,12 @@
       border-color: #d63a00;
     }
 
+    button.btn-active {
+      background: var(--yellow);
+      color: var(--indigo);
+      border-color: var(--yellow);
+    }
+
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -197,14 +218,9 @@
       gap: 0.5rem;
     }
 
-    .actions-grid button {
-      padding: 0.65rem 0.5rem;
-      text-align: center;
-    }
-
     .stats-bar {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
       gap: 0.75rem;
     }
 
@@ -238,7 +254,7 @@
 
     .console-box {
       flex: 1;
-      min-height: 380px;
+      min-height: 400px;
       max-height: 520px;
       background: var(--deep);
       border: 1px solid rgba(188, 172, 206, 0.2);
@@ -253,18 +269,11 @@
       word-break: break-all;
     }
 
-    .console-line {
-      margin-bottom: 0.25rem;
-    }
-
+    .console-line { margin-bottom: 0.25rem; }
     .console-line.success { color: var(--green); }
     .console-line.warn { color: #f1c40f; }
     .console-line.error { color: var(--red); }
     .console-line.accent { color: var(--yellow); font-weight: bold; }
-
-    .history-section {
-      grid-column: 1 / -1;
-    }
 
     table {
       width: 100%;
@@ -286,9 +295,7 @@
       letter-spacing: 0.05em;
     }
 
-    td {
-      color: var(--yellow);
-    }
+    td { color: var(--yellow); }
 
     .badge {
       display: inline-block;
@@ -298,12 +305,24 @@
       font-weight: 600;
     }
 
-    .badge-success { background: rgba(46, 204, 113, 0.2); color: var(--green); border: 1px solid var(--green); }
-    .badge-error { background: rgba(249, 69, 0, 0.2); color: var(--red); border: 1px solid var(--red); }
+    .badge-google { background: rgba(52, 152, 219, 0.25); color: #5dade2; border: 1px solid #3498db; }
+    .badge-bing { background: rgba(46, 204, 113, 0.25); color: var(--green); border: 1px solid var(--green); }
+    .badge-verified { background: rgba(46, 204, 113, 0.3); color: #2ecc71; border: 1px solid #2ecc71; }
+    .badge-other { background: rgba(188, 172, 206, 0.2); color: var(--lilac); border: 1px solid var(--lilac); }
+
+    .api-badge {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      background: var(--deep);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: var(--yellow);
+      border: 1px solid rgba(188, 172, 206, 0.25);
+    }
 
     footer {
       background: var(--deep);
-      padding: 1rem 2rem;
+      padding: 1.25rem 2rem;
       text-align: center;
       font-family: var(--font-mono);
       font-size: 0.75rem;
@@ -316,118 +335,207 @@
 
   <header>
     <div class="brand">
-      <span class="brand-spark">✳</span>
-      <span class="brand-title">Kawaki Rapid Indexer</span>
-      <span class="brand-tag">v1.0 Local Edition</span>
+      <span class="brand-spark">⚡</span>
+      <span class="brand-title">Fast Indexer</span>
+      <span class="brand-tag">v2.0 VPS & API Edition</span>
     </div>
-    <div class="status-pill">
-      <span class="dot" id="system-dot"></span>
-      <span id="system-status">Checking System...</span>
+    <div class="header-pills">
+      <div class="status-pill">
+        <span class="dot" id="system-dot"></span>
+        <span id="system-status">Checking System...</span>
+      </div>
+      <a href="/rss/latest.xml" target="_blank" style="text-decoration: none;">
+        <span class="api-badge">📡 Live RSS</span>
+      </a>
+      <span class="api-badge" id="api-endpoint-badge">REST API: /api/v1/index</span>
     </div>
   </header>
 
   <main>
-    <!-- Left Column: URL Inputs & Execution Triggers -->
-    <section class="panel">
-      <div>
-        <div class="panel-title">
-          <span>Target URLs</span>
-          <span class="panel-subtitle" id="url-count">0 URLs entered</span>
+    <!-- Row 1: Target URLs & Live Terminal -->
+    <div class="grid-2">
+      <!-- Left: Input & Launch -->
+      <section class="panel">
+        <div>
+          <div class="panel-title">
+            <span>Target URLs Batch</span>
+            <span class="panel-subtitle" id="url-count">0 URLs entered</span>
+          </div>
+          <div class="panel-subtitle">Generates an isolated RSS feed and triggers real-time search engine crawls.</div>
         </div>
-        <div class="panel-subtitle">Enter one URL per line to dispatch across all indexing channels.</div>
-      </div>
 
-      <div class="toolbar">
-        <button id="btn-load-core">Load Core URLs (10)</button>
-        <button id="btn-clear">Clear</button>
-      </div>
+        <div class="toolbar">
+          <button id="btn-load-core">Load Core URLs</button>
+          <button id="btn-clear">Clear</button>
+        </div>
 
-      <textarea id="url-input" placeholder="https://kawaki.co.in/services/custom-web-development&#10;https://kawaki.co.in/pricing&#10;https://kawaki.co.in/blog/what-is-ai-automation-examples-for-small-businesses"></textarea>
+        <textarea id="url-input" placeholder="https://kawaki.co.in/services/custom-web-development&#10;https://kawaki.co.in/pricing&#10;https://kawaki.co.in/blog/what-is-ai-automation-examples-for-small-businesses"></textarea>
 
-      <div>
-        <div class="panel-title" style="margin-bottom: 0.5rem;">Launch Indexing Vectors</div>
-        <button id="btn-run-full" class="btn-primary" style="width: 100%; margin-bottom: 0.75rem;">
-          🚀 Execute Full 5-Stage Rapid Index
-        </button>
+        <div>
+          <div class="panel-title" style="margin-bottom: 0.5rem;">Launch Indexing Vectors</div>
+          <button id="btn-run-full" class="btn-primary" style="width: 100%; margin-bottom: 0.75rem;">
+            🚀 Execute Full 5-Stage Rapid Index
+          </button>
 
-        <div class="actions-grid">
-          <button id="btn-run-google">🌐 Google API Only</button>
-          <button id="btn-run-indexnow">📡 IndexNow Only</button>
-          <button id="btn-run-ping">⚡ Ping Cascade</button>
-          <button id="btn-run-browser">🖥️ Chrome Visits</button>
+          <div class="actions-grid">
+            <button id="btn-run-google">🌐 Google API Only</button>
+            <button id="btn-run-indexnow">📡 IndexNow Only</button>
+            <button id="btn-run-ping">⚡ Isolated Ping</button>
+            <button id="btn-run-browser">🖥️ Chrome Visits</button>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat-card">
+            <div class="stat-label">Processed</div>
+            <div class="stat-value" id="stat-total">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Google API</div>
+            <div class="stat-value" id="stat-google">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">IndexNow</div>
+            <div class="stat-value" id="stat-indexnow">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Browser Visits</div>
+            <div class="stat-value" id="stat-telemetry">0</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Live SSE Console -->
+      <section class="panel">
+        <div class="console-header">
+          <div>
+            <div class="panel-title">Real-Time Terminal Stream</div>
+            <div class="panel-subtitle">Server-Sent Events from crawling workers</div>
+          </div>
+          <div class="toolbar">
+            <button id="btn-copy-log">Copy Logs</button>
+            <button id="btn-clear-log">Clear</button>
+          </div>
+        </div>
+
+        <div class="console-box" id="console-output">
+[Ready] System initialized. Enter URLs and select an execution mode above.
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 2: Real-Time Googlebot & Crawler Telemetry Logs -->
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <span>🤖 Googlebot & Search Crawler Telemetry</span>
+          <div class="panel-subtitle">Real-time log of search engine spiders crawling your isolated feeds and pages</div>
+        </div>
+        <div class="toolbar">
+          <button id="btn-filter-all" class="btn-active">All Bots</button>
+          <button id="btn-filter-google">Googlebot Only</button>
+          <button id="btn-refresh-bots">Refresh Bot Logs</button>
         </div>
       </div>
 
       <div class="stats-bar">
         <div class="stat-card">
-          <div class="stat-label">Processed</div>
-          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Googlebot Crawls</div>
+          <div class="stat-value" id="stat-bot-google" style="color: #5dade2;">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Google API</div>
-          <div class="stat-value" id="stat-google">0</div>
+          <div class="stat-label">Bingbot Crawls</div>
+          <div class="stat-value" id="stat-bot-bing" style="color: var(--green);">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">IndexNow</div>
-          <div class="stat-value" id="stat-indexnow">-</div>
+          <div class="stat-label">Total Spider Hits</div>
+          <div class="stat-value" id="stat-bot-total">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Telemetry</div>
-          <div class="stat-value" id="stat-telemetry">0</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Right Column: Live Stream Terminal -->
-    <section class="panel">
-      <div class="console-header">
-        <div>
-          <div class="panel-title">Real-Time Terminal Output</div>
-          <div class="panel-subtitle">Live events streamed from indexing workers</div>
-        </div>
-        <div class="toolbar">
-          <button id="btn-copy-log">Copy Logs</button>
-          <button id="btn-clear-log">Clear</button>
+          <div class="stat-label">Last Crawl Detected</div>
+          <div class="stat-value" id="stat-bot-last" style="font-size: 0.95rem; margin-top: 0.4rem;">None</div>
         </div>
       </div>
 
-      <div class="console-box" id="console-output">
-[Ready] System initialized. Enter URLs and select an execution mode above.
-      </div>
-    </section>
-
-    <!-- Bottom Row: Historical Executions -->
-    <section class="panel history-section">
-      <div class="panel-title">
-        <span>Execution History</span>
-        <button id="btn-refresh-history">Refresh History</button>
-      </div>
-
-      <div style="overflow-x: auto;">
+      <div style="overflow-x: auto; max-height: 340px;">
         <table>
           <thead>
             <tr>
               <th>Timestamp</th>
-              <th>Mode</th>
-              <th>URLs</th>
-              <th>Preflight</th>
-              <th>Google Queued</th>
-              <th>IndexNow</th>
-              <th>Chrome Visits</th>
+              <th>Spider / Bot</th>
+              <th>Status</th>
+              <th>Path Crawled</th>
+              <th>Client IP</th>
+              <th>User Agent</th>
             </tr>
           </thead>
-          <tbody id="history-tbody">
+          <tbody id="bot-tbody">
             <tr>
-              <td colspan="7" style="text-align: center; color: var(--lilac);">No past executions recorded yet.</td>
+              <td colspan="6" style="text-align: center; color: var(--lilac);">No bot visits recorded yet. Search engine crawlers will appear here when visiting your RSS feeds or site.</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <!-- Row 3: Isolated RSS Feeds & Batch History -->
+    <div class="grid-2">
+      <!-- Isolated Feeds -->
+      <section class="panel">
+        <div class="panel-title">
+          <span>📡 Isolated RSS Feeds</span>
+          <button id="btn-refresh-feeds">Refresh Feeds</button>
+        </div>
+        <div class="panel-subtitle">Dedicated RSS syndication feeds generated per batch</div>
+        <div style="overflow-x: auto; max-height: 250px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>Feed Link</th>
+                <th>URLs</th>
+              </tr>
+            </thead>
+            <tbody id="feeds-tbody">
+              <tr>
+                <td colspan="3" style="text-align: center; color: var(--lilac);">No isolated feeds generated yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Execution History -->
+      <section class="panel">
+        <div class="panel-title">
+          <span>Execution History</span>
+          <button id="btn-refresh-history">Refresh History</button>
+        </div>
+        <div class="panel-subtitle">Audit trail of past rapid indexing dispatches</div>
+        <div style="overflow-x: auto; max-height: 250px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Mode</th>
+                <th>URLs</th>
+                <th>Google API</th>
+                <th>IndexNow</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--lilac);">No past executions recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </main>
 
   <footer>
-    Kawaki Studios &bull; Standalone Rapid Indexing Suite &bull; Google Indexing API v3 + IndexNow + WebSub + Telemetry
+    Fast Indexer &bull; Production VPS & REST API Edition &bull; Multi-Engine Rapid Crawl Infrastructure
   </footer>
 
   <script>
@@ -436,12 +544,20 @@
     const consoleOutput = document.getElementById('console-output');
     const systemStatus = document.getElementById('system-status');
     const systemDot = document.getElementById('system-dot');
-    const historyTbody = document.getElementById('history-tbody');
-
+    
     const statTotal = document.getElementById('stat-total');
     const statGoogle = document.getElementById('stat-google');
     const statIndexNow = document.getElementById('stat-indexnow');
     const statTelemetry = document.getElementById('stat-telemetry');
+
+    const statBotGoogle = document.getElementById('stat-bot-google');
+    const statBotBing = document.getElementById('stat-bot-bing');
+    const statBotTotal = document.getElementById('stat-bot-total');
+    const statBotLast = document.getElementById('stat-bot-last');
+
+    const botTbody = document.getElementById('bot-tbody');
+    const feedsTbody = document.getElementById('feeds-tbody');
+    const historyTbody = document.getElementById('history-tbody');
 
     const allButtons = [
       document.getElementById('btn-run-full'),
@@ -450,6 +566,8 @@
       document.getElementById('btn-run-ping'),
       document.getElementById('btn-run-browser')
     ];
+
+    let currentBotFilter = 'all';
 
     function updateUrlCount() {
       const urls = getEnteredUrls();
@@ -473,10 +591,10 @@
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
     }
 
-    // Load initial system status
+    // System Status Check
     async function checkStatus() {
       try {
-        const res = await fetch('/api/status');
+        const res = await fetch('/api/v1/status');
         const data = await res.json();
         if (data.serviceAccount) {
           systemStatus.textContent = 'Google API & IndexNow Ready';
@@ -485,13 +603,101 @@
           systemStatus.textContent = 'Service Account Missing';
           systemDot.style.background = 'var(--red)';
         }
+        if (data.botTelemetry) {
+          updateBotStats(data.botTelemetry);
+        }
       } catch (err) {
         systemStatus.textContent = 'Server Offline';
         systemDot.style.background = 'var(--red)';
       }
     }
 
-    // Load core URLs
+    function updateBotStats(stats) {
+      statBotGoogle.textContent = stats.googleHits || 0;
+      statBotBing.textContent = stats.bingHits || 0;
+      statBotTotal.textContent = stats.totalHits || 0;
+      if (stats.lastVisit) {
+        const d = new Date(stats.lastVisit);
+        statBotLast.textContent = d.toLocaleTimeString() + ' ' + d.toLocaleDateString();
+      } else {
+        statBotLast.textContent = 'None';
+      }
+    }
+
+    // Load Bot Logs
+    async function loadBotLogs() {
+      try {
+        const filterParam = currentBotFilter === 'google' ? '?bot=google' : '';
+        const res = await fetch('/api/v1/bot-logs' + filterParam);
+        const data = await res.json();
+        if (data.stats) updateBotStats(data.stats);
+
+        if (data.logs && data.logs.length) {
+          botTbody.innerHTML = '';
+          data.logs.forEach(log => {
+            const tr = document.createElement('tr');
+            const d = new Date(log.timestamp).toLocaleTimeString();
+            const badgeClass = log.isGoogle ? 'badge-google' : (log.bot.includes('Bing') ? 'badge-bing' : 'badge-other');
+            const verifiedBadge = log.verified ? '<span class="badge badge-verified">VERIFIED</span>' : '';
+            tr.innerHTML = `
+              <td>${d}</td>
+              <td><span class="badge ${badgeClass}">${log.bot}</span> ${verifiedBadge}</td>
+              <td>200 OK</td>
+              <td><code>${log.path}</code></td>
+              <td>${log.ip}</td>
+              <td style="font-size: 0.7rem; color: var(--lilac); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${log.userAgent}">${log.userAgent}</td>
+            `;
+            botTbody.appendChild(tr);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Load Feeds
+    async function loadFeeds() {
+      try {
+        const res = await fetch('/api/v1/feeds');
+        const data = await res.json();
+        if (data.feeds && data.feeds.length) {
+          feedsTbody.innerHTML = '';
+          data.feeds.forEach(f => {
+            const tr = document.createElement('tr');
+            const d = new Date(f.createdAt).toLocaleTimeString();
+            tr.innerHTML = `
+              <td>${d}</td>
+              <td><a href="${f.feedPath}" target="_blank" style="color: var(--yellow);">${f.feedPath}</a></td>
+              <td>${f.urlCount} URL(s)</td>
+            `;
+            feedsTbody.appendChild(tr);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Load History
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const data = await res.json();
+        if (data.history && data.history.length) {
+          historyTbody.innerHTML = '';
+          data.history.forEach(run => {
+            const tr = document.createElement('tr');
+            const dateStr = new Date(run.timestamp).toLocaleTimeString();
+            tr.innerHTML = `
+              <td>${dateStr}</td>
+              <td><span class="badge badge-google">${run.mode.toUpperCase()}</span></td>
+              <td>${run.totalUrls}</td>
+              <td>${run.googlePublished !== undefined ? run.googlePublished : '-'}</td>
+              <td>${run.indexNowStatus || '-'}</td>
+            `;
+            historyTbody.appendChild(tr);
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Load Core URLs
     document.getElementById('btn-load-core').addEventListener('click', async () => {
       try {
         const res = await fetch('/api/core-urls');
@@ -520,32 +726,23 @@
       appendLog('[INFO] Console text copied to clipboard.', 'accent');
     });
 
-    // Load history
-    async function loadHistory() {
-      try {
-        const res = await fetch('/api/history');
-        const data = await res.json();
-        if (data.history && data.history.length) {
-          historyTbody.innerHTML = '';
-          data.history.forEach(run => {
-            const tr = document.createElement('tr');
-            const dateStr = new Date(run.timestamp).toLocaleString();
-            tr.innerHTML = `
-              <td>${dateStr}</td>
-              <td><span class="badge badge-success">${run.mode.toUpperCase()}</span></td>
-              <td>${run.totalUrls}</td>
-              <td>${run.preflightPassed || '-'}</td>
-              <td>${run.googlePublished !== undefined ? run.googlePublished : '-'}</td>
-              <td>${run.indexNowStatus || '-'}</td>
-              <td>${run.browserVisits || '-'}</td>
-            `;
-            historyTbody.appendChild(tr);
-          });
-        }
-      } catch (err) {}
-    }
-
+    document.getElementById('btn-refresh-bots').addEventListener('click', loadBotLogs);
+    document.getElementById('btn-refresh-feeds').addEventListener('click', loadFeeds);
     document.getElementById('btn-refresh-history').addEventListener('click', loadHistory);
+
+    document.getElementById('btn-filter-all').addEventListener('click', () => {
+      currentBotFilter = 'all';
+      document.getElementById('btn-filter-all').classList.add('btn-active');
+      document.getElementById('btn-filter-google').classList.remove('btn-active');
+      loadBotLogs();
+    });
+
+    document.getElementById('btn-filter-google').addEventListener('click', () => {
+      currentBotFilter = 'google';
+      document.getElementById('btn-filter-google').classList.add('btn-active');
+      document.getElementById('btn-filter-all').classList.remove('btn-active');
+      loadBotLogs();
+    });
 
     // Run action
     async function executeMode(mode) {
@@ -584,7 +781,7 @@
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n\n');
-          buffer = lines.pop(); // keep remainder
+          buffer = lines.pop();
 
           for (const chunk of lines) {
             const subLines = chunk.split('\n');
@@ -605,7 +802,7 @@
                   if (msg.includes('✓') || msg.includes('[OK]') || msg.includes('Complete') || msg.includes('Accepted')) type = 'success';
                   if (msg.includes('⚠️') || msg.includes('[WARN]')) type = 'warn';
                   if (msg.includes('[ERROR]') || msg.includes('Failed')) type = 'error';
-                  if (msg.startsWith('[Stage') || msg.startsWith('[START]')) type = 'accent';
+                  if (msg.startsWith('[Stage') || msg.startsWith('[START]') || msg.startsWith('[RSS]')) type = 'accent';
                   appendLog(msg, type);
                 } else if (event === 'done') {
                   if (data.stats) {
@@ -616,6 +813,8 @@
                   }
                   appendLog(`[SUCCESS] Run completed at ${new Date().toLocaleTimeString()}`, 'success');
                   loadHistory();
+                  loadFeeds();
+                  loadBotLogs();
                 }
               } catch (e) {}
             }
@@ -636,8 +835,13 @@
 
     // Boot
     checkStatus();
+    loadBotLogs();
+    loadFeeds();
     loadHistory();
     updateUrlCount();
+
+    // Auto-refresh bot logs every 15 seconds
+    setInterval(loadBotLogs, 15000);
   </script>
 </body>
 </html>

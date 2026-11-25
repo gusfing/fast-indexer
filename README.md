@@ -1,148 +1,164 @@
 # Fast Indexer ⚡
 
-> **Rapid URL Indexing Suite and Local Web Dashboard**  
-> Direct multi-engine crawl acceleration combining the Google Indexing API, IndexNow protocol, XML-RPC Ping Cascades, and Headless Browser Telemetry.
+> **Rapid URL Indexing Suite, REST API & Googlebot Telemetry Dashboard**  
+> Multi-engine crawl infrastructure combining the Google Indexing API v3, IndexNow protocol, isolated RSS syndication feeds, and real-time Googlebot crawl tracking.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/Node.js-18%2B-brightgreen)](https://nodejs.org/)
+[![Docker Ready](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
 
 ---
 
-## Overview
+## What's New in v2.0
 
-When new web pages, blog posts, or programmatic landing pages are published, search engine crawlers (Googlebot, Bingbot, YandexBot) often take days or weeks to discover and index them.
-
-**Fast Indexer** bridges this discovery gap by simultaneously broadcasting your URLs across five independent crawl vectors through a single, responsive local web interface.
+1. **Isolated RSS Feeds:** Generates dynamic, dedicated RSS 2.0 XML feeds per batch (`/rss/:batchId.xml`) and broadcasts them to Google WebSub and Ping-o-Matic.
+2. **Googlebot & Spider Telemetry:** Automatically tracks and records visits by `Googlebot (Smartphone)`, `Googlebot (Desktop)`, `Google Inspection Tool`, and `Bingbot`, storing IP, timestamp, user agent, and reverse DNS verification.
+3. **VPS Ready & REST API:** Deploy on any Ubuntu/Debian VPS with Docker Compose or systemd, featuring `POST /api/v1/index` for automated workflow integration.
 
 ---
 
-## How It Works: The 5 Crawl Vectors
+## Architecture & The 5 Crawl Vectors
 
 ```
-                                  ┌───► [Stage 1] Preflight HTTP & noindex Check
+                                  ┌───► [Stage 1] Preflight HTTP 200 & noindex Check
                                   │
                                   ├───► [Stage 2] Google Indexing API v3 (Direct Push)
                                   │
 [Your Target URLs] ──► Fast Indexer ───► [Stage 3] IndexNow Protocol (Bing / Yandex / Seznam)
                                   │
-                                  ├───► [Stage 4] XML-RPC & WebSub Ping Cascade
+                                  ├───► [Stage 4] Isolated RSS & XML-RPC Ping Cascade
+                                  │                └── Google WebSub & Ping-o-Matic
                                   │
                                   └───► [Stage 5] Headless Chrome Telemetry Visit
+                                                   └── Fires Analytics & Network Signals
+
+                                  ┌───► Real-Time Googlebot Telemetry Logger
+[Search Engine Spiders] ──────────┼───► /rss/:batchId.xml (Isolated Feed Crawls)
+                                  └───► Reverse DNS Bot Verification
 ```
 
-### 1. Preflight Health & Canonical Verification
-Before sending URLs to search engines, Fast Indexer tests each URL with an automated HTTP request. It verifies that the server returns `HTTP 200 OK` and inspects the response body for accidental `<meta name="robots" content="noindex">` directives or broken status codes. This protects your crawl quota and prevents notifying search engines of faulty pages.
+---
 
-### 2. Google Rapid Indexing API v3
-Fast Indexer authenticates directly with Google Cloud Platform using an authorized Service Account (`service-account.json`). It submits `URL_UPDATED` notification payloads directly into Google's instant indexing queue. This is the fastest legitimate method to trigger real-time Googlebot crawls.
+## REST API Documentation
 
-### 3. IndexNow Protocol
-IndexNow is an open protocol initiated by Microsoft Bing, Yandex, and Seznam. With a single HTTP POST request signed with your domain's verification key, Fast Indexer instantly notifies Bing and participating search engines that URLs were added or changed. Crawlers prioritize these URLs within seconds to minutes.
+Fast Indexer includes a high-performance REST API for programmatic indexing.
 
-### 4. RSS 2.0 & XML-RPC Ping Cascade
-Search engines and content aggregators listen for XML-RPC update pings. Fast Indexer dispatches standard `weblogUpdates.ping` XML payloads to Ping-o-Matic (which rebroadcasts to aggregators) and sends PubSubHubbub / WebSub notifications directly to Google's official WebSub Hub (`pubsubhubbub.appspot.com`).
+### `POST /api/v1/index`
+Submit a batch of URLs for rapid crawl scheduling.
 
-### 5. Headless Chrome Browser Telemetry
-Commercial indexing services frequently rely on synthetic user visits. Fast Indexer launches a local headless Chromium/Chrome instance to visit each target URL. This triggers client-side scripts, Google Analytics / Tag Manager events, and browser telemetry signals, confirming to search engine analytics infrastructure that the page is active and serving traffic.
+**Headers:**
+```http
+Content-Type: application/json
+X-API-Key: your-secret-api-key (optional, if configured)
+```
+
+**Request Body:**
+```json
+{
+  "urls": [
+    "https://example.com/new-product-page",
+    "https://example.com/blog/latest-article"
+  ],
+  "mode": "full",
+  "siteName": "My Website",
+  "siteUrl": "https://example.com"
+}
+```
+
+*Modes:* `full` (all 5 stages), `google` (Google API only), `indexnow` (Bing/Yandex only), `ping` (Isolated RSS pings only), `browser` (Headless Chrome visits only).
+
+**Response (HTTP 200):**
+```json
+{
+  "success": true,
+  "batchId": "batch_1795593596552",
+  "stats": {
+    "totalUrls": 2,
+    "isolatedFeedUrl": "http://your-vps:4040/rss/batch_1795593596552.xml",
+    "preflightPassed": 2,
+    "googlePublished": 2,
+    "indexNowStatus": "Success",
+    "browserVisits": 2
+  },
+  "logs": [
+    "[1:30:00 PM] Isolated RSS feed published: http://your-vps:4040/rss/batch_1795593596552.xml",
+    "[1:30:01 PM] [200 OK] Google crawl queued: https://example.com/new-product-page",
+    "[1:30:02 PM] [IndexNow OK] HTTP 200 Accepted: 2 URL(s) queued for crawl."
+  ]
+}
+```
+
+### `GET /api/v1/bot-logs`
+Retrieve real-time crawl visits from Googlebot, Bingbot, and other spiders.
+
+**Query Parameters:**
+- `bot=google`: Filter to Googlebot hits only.
+- `limit=50`: Number of log entries (default: 50, max: 1000).
+
+**Response:**
+```json
+{
+  "stats": {
+    "totalHits": 14,
+    "googleHits": 11,
+    "bingHits": 3,
+    "lastVisit": "2026-11-25T08:15:32.486Z"
+  },
+  "logs": [
+    {
+      "timestamp": "2026-11-25T08:15:32.486Z",
+      "bot": "Googlebot (Desktop)",
+      "isGoogle": true,
+      "ip": "66.249.66.1",
+      "path": "/rss/batch_1795593596552.xml",
+      "userAgent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "verified": true,
+      "reverseDns": "crawl-66-249-66-1.googlebot.com"
+    }
+  ]
+}
+```
+
+### `GET /rss/:batchId.xml`
+Returns the isolated RSS 2.0 XML feed generated for that batch. Automatically records spider visits.
 
 ---
 
-## Features
+## VPS Deployment Guide
 
-- **Modern Dark-Mode GUI:** Responsive dashboard built with a focused, readable dark palette.
-- **Real-Time Streaming Terminal:** Live execution progress delivered line-by-line using Server-Sent Events (SSE).
-- **1-Click Launchers:** Windows `.bat` and PowerShell `.ps1` files to start the server and open the browser automatically.
-- **Selective Crawl Vectors:** Run the complete 5-stage rapid indexing pipeline or target specific engines (Google Only, IndexNow Only, Ping Cascade, or Browser Simulation).
-- **History & Stats Tracking:** Automatically preserves run history, success metrics, and timestamped logs in `data/history.json`.
-- **Zero Heavy Backend Dependencies:** The local server runs on native Node.js HTTP with fallback path resolution.
+Fast Indexer is packaged with automated scripts for fast VPS deployment.
 
----
+### Method 1: 1-Click Bash Installer (Ubuntu/Debian)
+On a fresh VPS (Ubuntu 20.04+, 22.04+, Debian 11+), run:
+```bash
+curl -fsSL https://raw.githubusercontent.com/gusfing/fast-indexer/main/deploy-vps.sh | sudo bash
+```
+Or clone and run:
+```bash
+git clone https://github.com/gusfing/fast-indexer.git /opt/fast-indexer
+cd /opt/fast-indexer
+chmod +x deploy-vps.sh
+sudo ./deploy-vps.sh
+```
 
-## Quick Start
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) v18.0.0 or higher.
-- Google Chrome installed on your machine (for Stage 5 browser telemetry).
-
-### 1. Clone the Repository
+### Method 2: Docker Compose
 ```bash
 git clone https://github.com/gusfing/fast-indexer.git
 cd fast-indexer
+cp service-account.sample.json service-account.json # Add your GCP credentials
+docker compose up -d
 ```
+The application will be live at `http://your-vps-ip:4040`.
 
-### 2. Install Optional Dependencies (if not already globally available)
-```bash
-npm install
-```
-
-### 3. Add Google Service Account Credentials
-1. In the Google Cloud Console, enable the **Web Search Indexing API**.
-2. Create a Service Account and generate a JSON key.
-3. In Google Search Console, add the Service Account email address as a **Verified Owner** of your domain property.
-4. Rename your downloaded key file to `service-account.json` and place it in the root folder (see `service-account.sample.json` for reference).
-
-> **Security Note:** `service-account.json` is automatically ignored in `.gitignore` and should never be committed to public repositories.
-
-### 4. Configure IndexNow (Optional / Recommended)
-Generate an IndexNow API key and place the verification text file on your domain's root (e.g. `https://yourdomain.com/your-key.txt`). Configure your key in `.env` or in `modules/indexnow.js`.
+### Method 3: Reverse Proxy with SSL (Caddy or Nginx)
+- **Caddy (Automatic SSL):** Use the included `Caddyfile`. Replace `indexer.yourdomain.com` and run `caddy run`.
+- **Nginx:** Use the included `nginx.conf` and secure with Certbot.
 
 ---
 
-## Running the Application
+## Local Usage (Windows)
 
-### Option A: 1-Click Launch (Windows)
-Double-click `start.bat` (or right-click `start.ps1` and choose **Run with PowerShell**).  
-The script clears any stale local ports, boots the server, and automatically launches `http://localhost:4040` in your default browser.
-
-### Option B: Terminal Command
-```bash
-node server.js
-```
-Then visit [http://localhost:4040](http://localhost:4040) in your browser.
-
----
-
-## Project Structure
-
-```
-fast-indexer/
-├── start.bat                  # 1-Click Windows batch launcher
-├── start.ps1                  # 1-Click PowerShell launcher
-├── server.js                  # Local HTTP + SSE streaming server
-├── package.json               # Project manifest
-├── service-account.sample.json# Template for Google Cloud credentials
-├── .env.example               # Example environment variables
-├── .gitignore                 # Excludes secrets, logs, and node_modules
-├── README.md                  # Documentation and architecture guide
-│
-├── public/
-│   └── index.html             # Web dashboard GUI with live SSE terminal
-│
-├── modules/
-│   ├── preflight.js           # Stage 1: HTTP 200 & noindex verification
-│   ├── google-indexer.js      # Stage 2: Google Indexing API v3 client
-│   ├── indexnow.js            # Stage 3: IndexNow (Bing/Yandex) dispatcher
-│   ├── ping-cascade.js        # Stage 4: XML-RPC & Google WebSub pinger
-│   └── browser-ping.js        # Stage 5: Headless Chrome telemetry simulator
-│
-└── data/
-    ├── core-urls.json         # Preset target URLs for 1-click loading
-    └── history.json           # Past execution history and metrics
-```
-
----
-
-## API Endpoints
-
-The local server exposes lightweight JSON & SSE endpoints:
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/` | `GET` | Serves the web dashboard GUI |
-| `/api/status` | `GET` | Returns system credentials and engine availability |
-| `/api/core-urls` | `GET` | Loads preset URLs from `data/core-urls.json` |
-| `/api/history` | `GET` | Returns past execution runs from `data/history.json` |
-| `/api/run` | `POST` | Dispatches URLs and streams live execution logs via SSE |
+Double-click `start.bat` on your Desktop. It automatically frees port 4040, starts the server, and opens [http://localhost:4040](http://localhost:4040).
 
 ---
 

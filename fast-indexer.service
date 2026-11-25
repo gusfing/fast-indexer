@@ -1,0 +1,18 @@
+[Unit]
+Description=Fast Indexer - Multi-Engine Rapid URL Indexing Suite & API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/fast-indexer
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=PORT=4040
+Environment=NODE_ENV=production
+# Environment=API_KEY=your-secret-api-key
+# Environment=BASE_URL=https://indexer.yourdomain.com
+
+[Install]
+WantedBy=multi-user.target

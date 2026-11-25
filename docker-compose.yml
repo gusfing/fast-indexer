@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  fast-indexer:
+    build: .
+    container_name: fast-indexer
+    restart: unless-stopped
+    ports:
+      - "4040:4040"
+    environment:
+      - PORT=4040
+      - API_KEY=${API_KEY:-}
+      - BASE_URL=${BASE_URL:-http://localhost:4040}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-262ab81b1de8469b20c5678a83f31ba5}
+    volumes:
+      - ./data:/app/data
+      - ./service-account.json:/app/service-account.json:ro
