@@ -421,7 +421,7 @@
 
         <div class="toolbar">
           <button id="btn-load-core">Load Core URLs</button>
-          <button id="btn-gen-2000" style="color: #5dade2; border-color: #5dade2;">⚡ Generate 2,000 URLs Batch</button>
+          
           <button id="btn-clear">Clear</button>
         </div>
 
@@ -804,23 +804,7 @@
       }
     });
 
-    // Generate 2000 URLs stress test
-    document.getElementById('btn-gen-2000').addEventListener('click', () => {
-      const host = inputSiteHost.value.trim() || 'kawaki.co.in';
-      const samplePaths = [
-        'services/custom-web-development', 'pricing', 'about', 'contact', 'solutions/healthcare',
-        'delhi/web-development-company', 'bangalore/seo-company', 'mumbai/web-development-company',
-        'blog/what-is-ai-automation-examples-for-small-businesses', 'blog/nextjs-performance-architecture'
-      ];
-      const batch = [];
-      for (let i = 1; i <= 2000; i++) {
-        const p = samplePaths[i % samplePaths.length];
-        batch.push(`https://${host}/${p}?batch_item=${i}`);
-      }
-      urlInput.value = batch.join('\n');
-      updateUrlCount();
-      appendLog(`[INFO] Generated 2,000 real URL batch targets under https://${host}`, 'accent');
-    });
+    
 
     document.getElementById('btn-clear').addEventListener('click', () => {
       urlInput.value = '';
